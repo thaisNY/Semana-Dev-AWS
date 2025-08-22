@@ -1,0 +1,696 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Semana do Desenvolvedor – Dias 1 a 4 Arquitetura completa de Ingestão, Validação, Processamento, Armazenamento, Alteração e Cancelamento de Pedidos.\n",
+    "Resources": {
+        "LambdaPreValidacaoRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "lambda-prevalidacao-role-seu-thais",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                ],
+                "Policies": [
+                    {
+                        "PolicyName": "SQSSendMessageToPedidosFIFO-seu-thais",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "sqs:SendMessage"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "PedidosQueue",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "LambdaValidacaoPedidosRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "lambda-validacao-pedidos-role-seu-thais",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                ],
+                "Policies": [
+                    {
+                        "PolicyName": "SQSReadEventBridgePutPolicy-seu-thais",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "sqs:ReceiveMessage",
+                                        "sqs:DeleteMessage",
+                                        "sqs:GetQueueAttributes"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "PedidosQueue",
+                                            "Arn"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "events:PutEvents"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "PedidosEventBus",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "LambdaProcessaPedidosRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "lambda-processa-pedidos-role-seu-thais",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                ],
+                "Policies": [
+                    {
+                        "PolicyName": "DynamoDBWritePolicy-seu-thais",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "dynamodb:PutItem"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "PedidosDynamoDB",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "LambdaAlteraCancelaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "lambda-altera-cancela-role-seu-thais",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+                ],
+                "Policies": [
+                    {
+                        "PolicyName": "SQSDynamoDBPolicy-seu-thais",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "sqs:ReceiveMessage",
+                                        "sqs:DeleteMessage",
+                                        "sqs:GetQueueAttributes"
+                                    ],
+                                    "Resource": [
+                                        {
+                                            "Fn::GetAtt": [
+                                                "CancelaPedidoQueue",
+                                                "Arn"
+                                            ]
+                                        },
+                                        {
+                                            "Fn::GetAtt": [
+                                                "AlteraPedidoQueue",
+                                                "Arn"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "dynamodb:UpdateItem",
+                                        "dynamodb:DeleteItem"
+                                    ],
+                                    "Resource": {
+                                        "Fn::GetAtt": [
+                                            "PedidosDynamoDB",
+                                            "Arn"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "PedidosDLQ": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "pedidos-fifo-dlq-seu-thais.fifo",
+                "FifoQueue": true
+            }
+        },
+        "PedidosQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "pedidos-fifo-queue-seu-thais.fifo",
+                "FifoQueue": true,
+                "RedrivePolicy": {
+                    "deadLetterTargetArn": {
+                        "Fn::GetAtt": [
+                            "PedidosDLQ",
+                            "Arn"
+                        ]
+                    },
+                    "maxReceiveCount": 3
+                }
+            }
+        },
+        "CancelaPedidoDLQ": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "cancela-pedido-dlq-seu-thais"
+            }
+        },
+        "CancelaPedidoQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "cancela-pedido-queue-seu-thais",
+                "VisibilityTimeout": 70,
+                "RedrivePolicy": {
+                    "deadLetterTargetArn": {
+                        "Fn::GetAtt": [
+                            "CancelaPedidoDLQ",
+                            "Arn"
+                        ]
+                    },
+                    "maxReceiveCount": 3
+                }
+            }
+        },
+        "AlteraPedidoDLQ": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "altera-pedido-dlq-seu-thais"
+            }
+        },
+        "AlteraPedidoQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": "altera-pedido-queue-seu-thais",
+                "VisibilityTimeout": 70,
+                "RedrivePolicy": {
+                    "deadLetterTargetArn": {
+                        "Fn::GetAtt": [
+                            "AlteraPedidoDLQ",
+                            "Arn"
+                        ]
+                    },
+                    "maxReceiveCount": 3
+                }
+            }
+        },
+        "PedidosEventBus": {
+            "Type": "AWS::Events::EventBus",
+            "Properties": {
+                "Name": "pedidos-event-bus-seu-thais"
+            }
+        },
+        "CancelaPedidoRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Name": "cancela-pedido-rule-seu-thais",
+                "EventBusName": {
+                    "Ref": "PedidosEventBus"
+                },
+                "EventPattern": {
+                    "source": [
+                        "lab.aula4.operacoes"
+                    ],
+                    "detail-type": [
+                        "CancelaPedido"
+                    ]
+                },
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "CancelaPedidoQueue",
+                                "Arn"
+                            ]
+                        },
+                        "Id": "CancelaPedidoTarget"
+                    }
+                ]
+            }
+        },
+        "AlteraPedidoRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Name": "altera-pedido-rule-seu-thais",
+                "EventBusName": {
+                    "Ref": "PedidosEventBus"
+                },
+                "EventPattern": {
+                    "source": [
+                        "lab.aula4.operacoes"
+                    ],
+                    "detail-type": [
+                        "AlteraPedido"
+                    ]
+                },
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "AlteraPedidoQueue",
+                                "Arn"
+                            ]
+                        },
+                        "Id": "AlteraPedidoTarget"
+                    }
+                ]
+            }
+        },
+        "PedidosDynamoDB": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "TableName": "pedidos-db-seu-thais",
+                "BillingMode": "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pedidoId",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pedidoId",
+                        "KeyType": "HASH"
+                    }
+                ]
+            }
+        },
+        "PedidosBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": "pedidos-bucket-seu-thais"
+            }
+        },
+        "BucketNotification": {
+            "Type": "AWS::S3::BucketNotification",
+            "Properties": {
+                "Bucket": {
+                    "Ref": "PedidosBucket"
+                },
+                "NotificationConfiguration": {
+                    "LambdaConfigurations": [
+                        {
+                            "Event": "s3:ObjectCreated:*",
+                            "Function": {
+                                "Fn::GetAtt": [
+                                    "IngestaoS3Lambda",
+                                    "Arn"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "LambdaS3Permission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "Action": "lambda:InvokeFunction",
+                "FunctionName": {
+                    "Ref": "IngestaoS3Lambda"
+                },
+                "Principal": "s3.amazonaws.com",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "PedidosBucket",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "PreValidacaoLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "pre-validacao-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaPreValidacaoRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "pre-validacao.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "SQS_QUEUE_URL": {
+                            "Ref": "PedidosQueue"
+                        }
+                    }
+                }
+            }
+        },
+        "ValidacaoPedidosLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "validacao-pedidos-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaValidacaoPedidosRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "validacao-pedidos.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "EVENT_BUS_NAME": {
+                            "Ref": "PedidosEventBus"
+                        }
+                    }
+                }
+            }
+        },
+        "ProcessaPedidosLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "processa-pedidos-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaProcessaPedidosRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "processa-pedidos.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "DYNAMODB_TABLE_NAME": {
+                            "Ref": "PedidosDynamoDB"
+                        }
+                    }
+                }
+            }
+        },
+        "IngestaoS3Lambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "ingestao-s3-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaPreValidacaoRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "ingestao-s3.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "SQS_QUEUE_URL": {
+                            "Ref": "PedidosQueue"
+                        }
+                    }
+                }
+            }
+        },
+        "CancelaPedidoLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "cancela-pedido-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaAlteraCancelaRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 60,
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "cancela-pedido.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "DYNAMODB_TABLE_NAME": {
+                            "Ref": "PedidosDynamoDB"
+                        }
+                    }
+                }
+            }
+        },
+        "AlteraPedidoLambda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "FunctionName": "altera-pedido-lambda-seu-thais",
+                "Runtime": "python3.12",
+                "Handler": "lambda_function.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaAlteraCancelaRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 60,
+                "Code": {
+                    "S3Bucket": "meu-bucket-lambdas",
+                    "S3Key": "altera-pedido.zip"
+                },
+                "Environment": {
+                    "Variables": {
+                        "DYNAMODB_TABLE_NAME": {
+                            "Ref": "PedidosDynamoDB"
+                        }
+                    }
+                }
+            }
+        },
+        "SQSTriggerValidacao": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "Properties": {
+                "BatchSize": 1,
+                "EventSourceArn": {
+                    "Fn::GetAtt": [
+                        "PedidosQueue",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": {
+                    "Ref": "ValidacaoPedidosLambda"
+                }
+            }
+        },
+        "SQSTriggerProcessamento": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "Properties": {
+                "BatchSize": 1,
+                "EventSourceArn": {
+                    "Fn::GetAtt": [
+                        "PedidosQueue",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": {
+                    "Ref": "ProcessaPedidosLambda"
+                }
+            }
+        },
+        "SQSTriggerCancela": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "Properties": {
+                "BatchSize": 1,
+                "EventSourceArn": {
+                    "Fn::GetAtt": [
+                        "CancelaPedidoQueue",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": {
+                    "Ref": "CancelaPedidoLambda"
+                }
+            }
+        },
+        "SQSTriggerAltera": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "Properties": {
+                "BatchSize": 1,
+                "EventSourceArn": {
+                    "Fn::GetAtt": [
+                        "AlteraPedidoQueue",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": {
+                    "Ref": "AlteraPedidoLambda"
+                }
+            }
+        },
+        "PedidosApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+                "Name": "pedidos-api-seu-thais",
+                "Description": "API para recebimento de pedidos",
+                "EndpointConfiguration": {
+                    "Types": [
+                        "REGIONAL"
+                    ]
+                }
+            }
+        },
+        "PedidosResource": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+                "ParentId": {
+                    "Fn::GetAtt": [
+                        "PedidosApi",
+                        "RootResourceId"
+                    ]
+                },
+                "PathPart": "pedidos",
+                "RestApiId": {
+                    "Ref": "PedidosApi"
+                }
+            }
+        },
+        "PedidosMethodPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+                "RestApiId": {
+                    "Ref": "PedidosApi"
+                },
+                "ResourceId": {
+                    "Ref": "PedidosResource"
+                },
+                "HttpMethod": "POST",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                    "IntegrationHttpMethod": "POST",
+                    "Type": "AWS_PROXY",
+                    "Uri": {
+                        "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PreValidacaoLambda.Arn}/invocations"
+                    }
+                }
+            }
+        },
+        "ApiDeployment": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "DependsOn": "PedidosMethodPost",
+            "Properties": {
+                "RestApiId": {
+                    "Ref": "PedidosApi"
+                },
+                "StageName": "dev"
+            }
+        },
+        "LambdaApiPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "Action": "lambda:InvokeFunction",
+                "FunctionName": {
+                    "Ref": "PreValidacaoLambda"
+                },
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                    "Fn::Sub": "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${PedidosApi}/*/POST/pedidos"
+                }
+            }
+        }
+    },
+    "Metadata": {
+        "AWS::Composer::Groups": {
+            "Group": {
+                "Label": "Group",
+                "Members": []
+            }
+        }
+    }
+}
