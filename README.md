@@ -6,6 +6,7 @@
 
 Neste projeto, eu construí uma arquitetura AWS completa e funcional, explorando diversos serviços serverless e orientados a eventos. Durante quatro aulas intensas, eu desenvolvi cada etapa do pipeline de pedidos, desde a entrada dos dados até o processamento e persistência.
 
+![Descrição da Imagem](https://raw.githubusercontent.com/thaisNY/Semana-Dev-AWS/main/imgs/layout.png)
 ---
 
 ### O que foi feito em cada aula
