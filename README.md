@@ -36,4 +36,4 @@ Foram quatro dias intensos, repletos de prática, configurações e desafios. Ca
 
 Sinto que construí algo **complexo e funcional**, peça por peça, e que minha persistência e curiosidade foram essenciais para chegar até aqui. Este projeto me proporcionou uma **base sólida para continuar explorando o universo da AWS** e me dá confiança para enfrentar novos desafios em nuvem.
 
-Estou animado para continuar aprendendo, experimentando e construindo coisas incríveis com a AWS!
+Estou animada para continuar aprendendo, experimentando e construindo coisas incríveis com a AWS!
